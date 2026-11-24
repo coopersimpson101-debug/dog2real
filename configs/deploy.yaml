@@ -1,0 +1,64 @@
+# ---------------------------------------------------------------------------
+# Real-robot runtime configuration (scripts/run_robot.py).
+# EVERYTHING in the motors: section is a placeholder -- fill in your CAN ids,
+# directions and zero offsets after following docs/match_your_robot.md.
+# ---------------------------------------------------------------------------
+robot: robot.yaml
+
+control:
+  policy_dt: 0.02          # must match training (sim_dt * decimation)
+  action_scale: 0.25       # must match training
+  clip_actions: 10.0
+  obs_scales: {ang_vel: 0.25, commands: [2.0, 2.0, 0.25], dof_pos: 1.0, dof_vel: 0.05}
+  kp: 20.0                 # must match training (robot.yaml pd.kp)
+  kd: 0.5
+  startup: ramp            # ramp -> stand up slowly first (walking); policy -> start immediately (get-up)
+  ramp_s: 3.0
+  command: [0.0, 0.0, 0.0] # vx, vy, yaw rate -- start at zero!
+
+safety:
+  limit_margin: 0.05
+  max_target_step: 0.15    # rad per tick
+  max_torque: 12.0         # Nm; start low, raise once it works
+  max_joint_vel: 20.0
+  tilt_cutoff_rad: 0.8
+  tilt_check: true         # set false for the get-up policy
+  damping_kd: 1.0
+  hard_limit_tolerance: 0.15
+
+motors:
+  driver: mit_can
+  interface: socketcan     # python-can interface: socketcan (Linux), pcan, slcan, gs_usb, virtual
+  channel: can0
+  bitrate: 1000000
+  reply_timeout: 0.002
+  comm_timeout: 0.05
+  model: AK80-9            # default preset for all joints (see dog2real/deploy/hal/mit_can.py)
+  joints:                  # sign/offset/gear map motor -> joint frame
+    - {name: FL_abad, can_id: 1,  sign: 1.0,  offset: 0.0, gear: 1.0}
+    - {name: FL_hip,  can_id: 2,  sign: 1.0,  offset: 0.0, gear: 1.0}
+    - {name: FL_knee, can_id: 3,  sign: 1.0,  offset: 0.0, gear: 1.0}
+    - {name: FR_abad, can_id: 4,  sign: 1.0,  offset: 0.0, gear: 1.0}
+    - {name: FR_hip,  can_id: 5,  sign: -1.0, offset: 0.0, gear: 1.0}
+    - {name: FR_knee, can_id: 6,  sign: -1.0, offset: 0.0, gear: 1.0}
+    - {name: RL_abad, can_id: 7,  sign: -1.0, offset: 0.0, gear: 1.0}
+    - {name: RL_hip,  can_id: 8,  sign: 1.0,  offset: 0.0, gear: 1.0}
+    - {name: RL_knee, can_id: 9,  sign: 1.0,  offset: 0.0, gear: 1.0}
+    - {name: RR_abad, can_id: 10, sign: -1.0, offset: 0.0, gear: 1.0}
+    - {name: RR_hip,  can_id: 11, sign: -1.0, offset: 0.0, gear: 1.0}
+    - {name: RR_knee, can_id: 12, sign: -1.0, offset: 0.0, gear: 1.0}
+
+imu:
+  driver: mpu6050          # mpu6050 (I2C via smbus2); write an adapter for others (see hal/imu.py)
+  i2c_bus: 1
+  address: 0x68
+  rotation: [[1, 0, 0], [0, 1, 0], [0, 0, 1]]   # sensor -> body frame
+  filter_gain: 0.02
+
+estop:
+  gpio_pin: null           # BCM pin of a normally-closed e-stop button (needs gpiozero), or null
+
+sim:                       # used by run_robot.py --sim
+  latency_s: 0.004
+  start_pose: lying        # lying | standing
+  gyro_noise: 0.02

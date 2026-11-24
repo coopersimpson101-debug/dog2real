@@ -1,0 +1,98 @@
+# Flat-ground velocity-tracking (walking) task.
+robot: robot.yaml          # resolved relative to configs/
+task: walk
+seed: 1
+
+env:
+  num_envs: 64             # CPU default; raise to 256-1024 on a workstation
+  sim_dt: 0.002            # 500 Hz physics
+  decimation: 10           # 50 Hz policy
+  episode_length_s: 20.0
+  action_scale: 0.25
+  clip_actions: 10.0
+  base_height_target: 0.29
+  min_base_height: 0.12
+  max_tilt_rad: 1.0
+  tracking_sigma: 0.25
+  command_resample_s: 10.0
+  soft_dof_pos_limit: 0.9
+  obs_scales: {ang_vel: 0.25, commands: [2.0, 2.0, 0.25], dof_pos: 1.0, dof_vel: 0.05}
+
+commands:
+  curriculum: true
+  threshold: 0.8           # fraction of max tracking reward needed to widen the range
+  step: 0.1
+  zero_prob: 0.1
+  init_ranges: {lin_vel_x: [-0.3, 0.5], lin_vel_y: [-0.2, 0.2], ang_vel_yaw: [-0.5, 0.5]}
+  max_ranges:  {lin_vel_x: [-0.8, 1.5], lin_vel_y: [-0.5, 0.5], ang_vel_yaw: [-1.5, 1.5]}
+
+rewards:                   # multiplied by the policy dt internally
+  tracking_lin_vel: 1.0
+  tracking_ang_vel: 0.5
+  lin_vel_z: -2.0
+  ang_vel_xy: -0.05
+  orientation: -1.0
+  base_height: -10.0
+  torques: -2.0e-4
+  dof_acc: -2.5e-7
+  action_rate: -0.01
+  feet_air_time: 1.0
+  collision: -1.0
+  dof_pos_limits: -10.0
+  stand_still: -0.1
+  termination: -5.0
+
+actuator:
+  type: dc_motor           # or actuator_net (set path: to a file from scripts/train_actuator_net.py)
+
+domain_rand:
+  enabled: true
+  friction: [0.4, 1.25]
+  added_base_mass: [-0.5, 1.5]
+  base_com_offset: [0.03, 0.02, 0.02]
+  link_mass_scale: [0.9, 1.1]
+  motor_strength: [0.85, 1.1]
+  kp_scale: [0.85, 1.15]
+  kd_scale: [0.8, 1.25]
+  latency_substeps: [0, 8]      # x 2 ms -> 0..16 ms actuation delay
+  push: {enabled: true, interval_s: 8.0, max_vel_xy: 0.5}
+
+imu_noise:
+  enabled: true
+  gyro_bias: 0.02          # rad/s, constant per episode
+  gyro_noise: 0.05         # rad/s std
+  tilt_bias: 0.02          # rad, attitude-filter error per episode
+  gravity_noise: 0.02
+
+obs_noise:
+  enabled: true
+  level: 1.0
+  dof_pos: 0.01            # rad (encoder quantisation / backlash)
+  dof_vel: 1.0             # rad/s (finite-difference velocity noise)
+
+policy:
+  actor_hidden: [256, 128, 64]
+  critic_hidden: [256, 128, 64]
+  activation: elu
+  init_noise_std: 1.0
+  asymmetric_critic: true  # critic sees privileged state (lin vel, friction, ...)
+
+ppo:
+  steps_per_env: 24
+  num_epochs: 5
+  num_minibatches: 4
+  gamma: 0.99
+  lam: 0.95
+  clip_param: 0.2
+  value_clip: true
+  value_loss_coef: 1.0
+  entropy_coef: 0.01
+  learning_rate: 1.0e-3
+  schedule: adaptive       # adaptive (KL) or fixed
+  desired_kl: 0.01
+  max_grad_norm: 1.0
+
+runner:
+  iterations: 1500
+  save_interval: 50
+  log_dir: runs

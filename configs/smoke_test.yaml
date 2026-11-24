@@ -1,0 +1,12 @@
+# Tiny config used by CI and the CPU smoke-train. It will NOT produce a walking policy.
+extends: train_walk.yaml
+env:
+  num_envs: 16
+ppo:
+  steps_per_env: 24
+runner:
+  iterations: 3
+  save_interval: 1
+policy:
+  actor_hidden: [64, 64]
+  critic_hidden: [64, 64]

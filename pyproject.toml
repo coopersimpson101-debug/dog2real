@@ -1,0 +1,32 @@
+[build-system]
+requires = ["setuptools>=64"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "dog2real"
+version = "0.1.0"
+description = "Sim-to-real reinforcement learning for DIY 12-DoF quadruped robot dogs (MuJoCo + from-scratch PPO)"
+readme = "README.md"
+license = { text = "MIT" }
+requires-python = ">=3.10"
+dependencies = [
+  "numpy>=1.24",
+  "mujoco>=3.1",
+  "torch>=2.2",
+  "pyyaml>=6.0",
+  "gymnasium>=0.29",
+]
+
+[project.optional-dependencies]
+deploy = ["onnx>=1.15", "onnxruntime>=1.17", "python-can>=4.3"]
+video = ["imageio>=2.31", "imageio-ffmpeg>=0.4"]
+logging = ["tensorboard>=2.14"]
+robot = ["smbus2>=0.4", "gpiozero>=2.0"]
+dev = ["pytest>=7.4", "onnx>=1.15", "onnxruntime>=1.17", "python-can>=4.3", "imageio>=2.31"]
+
+[tool.setuptools.packages.find]
+include = ["dog2real*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"

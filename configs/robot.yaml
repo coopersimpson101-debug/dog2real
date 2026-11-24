@@ -1,0 +1,56 @@
+# ---------------------------------------------------------------------------
+# dog2real robot description: a generic 12-DoF quadruped.
+#
+# Every number here is a PLACEHOLDER for a ~7 kg "mini" class DIY robot dog.
+# Replace them with measurements of YOUR build -- see docs/match_your_robot.md.
+# Units: metres, kilograms, radians, newton-metres, seconds.
+# Leg order everywhere in the code: FL, FR, RL, RR; per leg: abad, hip, knee.
+# ---------------------------------------------------------------------------
+name: dog2real_generic
+
+base:
+  size: [0.38, 0.19, 0.10]   # box length (x), width (y), height (z)
+  mass: 2.5                  # body + battery + electronics
+  com_offset: [0.0, 0.0, 0.0]
+
+leg:
+  hip_offset: [0.17, 0.065]  # |x|, |y| of the abduction axis from the base centre
+  abad:                      # abduction "hip" link (houses the hip-flexion motor)
+    length: 0.07             # lateral offset from abad axis to hip-flexion axis
+    mass: 0.40
+    radius: 0.040
+  thigh:
+    length: 0.20
+    mass: 0.60
+    radius: 0.022
+  calf:
+    length: 0.20
+    mass: 0.15
+    radius: 0.013
+  foot:
+    radius: 0.020
+    mass: 0.03
+
+joints:
+  # [lower, upper] limits and nominal standing pose (rad)
+  abad:  {range: [-0.80, 0.80], default: 0.0}
+  hip:   {range: [-1.60, 3.00], default: 0.80}
+  knee:  {range: [-2.70, -0.60], default: -1.50}
+  damping: 0.05          # Nm s/rad, measured with scripts/motor_sysid.py
+  armature: 0.010        # reflected rotor inertia (kg m^2) = J_rotor * gear^2
+  frictionloss: 0.10     # Coulomb friction (Nm)
+
+motor:
+  # DC motor torque-speed model at the joint (output) side.
+  torque_limit: 18.0      # peak torque (Nm) -- clamp
+  stall_torque: 22.0      # torque at zero speed from the torque-speed curve
+  no_load_speed: 30.0     # rad/s at the output where available torque reaches 0
+  velocity_limit: 25.0    # rad/s, software limit used by the safety layer
+
+pd:
+  kp: 20.0                # Nm/rad
+  kd: 0.5                 # Nm s/rad
+
+contact:
+  foot_friction: 0.9
+  body_friction: 0.6

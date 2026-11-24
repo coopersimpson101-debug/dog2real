@@ -1,0 +1,29 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.venv/
+venv/
+env/
+
+# training / deployment outputs
+runs/
+logs/
+build/
+exported/
+*.pt
+*.onnx
+*.ckpt
+events.out.tfevents.*
+*.log
+
+# media is opt-in: add your sim/real videos under media/ with git add -f
+media/*.mp4
+media/*.gif
+
+# OS / editors
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
