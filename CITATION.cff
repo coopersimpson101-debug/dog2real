@@ -1,0 +1,16 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it as below."
+title: "dog2real: Sim-to-real reinforcement learning for a DIY 12-DoF robot dog"
+type: software
+authors:
+  - name: "the dog2real authors"
+license: MIT
+repository-code: "https://github.com/coopersimpson101-debug/dog2real"
+version: 0.1.0
+keywords:
+  - reinforcement learning
+  - sim-to-real
+  - quadruped
+  - MuJoCo
+  - PPO
+  - robotics

@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="400" viewBox="0 0 1280 400">
+  <defs>
+    <pattern id="g" width="32" height="32" patternUnits="userSpaceOnUse">
+      <path d="M32 0H0V32" fill="none" stroke="#e6edf3" stroke-opacity="0.05" stroke-width="1"/>
+    </pattern>
+    <radialGradient id="glow" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#FBBF24" stop-opacity="0.14"/>
+      <stop offset="1" stop-color="#FBBF24" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect width="1280" height="400" fill="#0d1117"/>
+  <rect width="1280" height="400" fill="url(#g)"/>
+  <ellipse cx="1000" cy="200" rx="300" ry="190" fill="url(#glow)"/>
+  <line x1="740" y1="300" x2="1260" y2="300" stroke="#30363d" stroke-width="2"/>
+  <polyline points="1116.7,113.5 1041.8,207.1 1136.3,281.1" fill="none" stroke="#FBBF24" stroke-opacity="0.35" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/><circle cx="1041.8" cy="207.1" r="6" fill="#0d1117" stroke="#FBBF24" stroke-opacity="0.35" stroke-width="2.5"/><circle cx="1136.3" cy="281.1" r="12.0" fill="#FBBF24" fill-opacity="0.35"/><polyline points="913.3,129.6 841.0,222.9 945.7,281.4" fill="none" stroke="#FBBF24" stroke-opacity="0.35" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/><circle cx="841.0" cy="222.9" r="6" fill="#0d1117" stroke="#FBBF24" stroke-opacity="0.35" stroke-width="2.5"/><circle cx="945.7" cy="281.4" r="12.0" fill="#FBBF24" fill-opacity="0.35"/>
+  <rect x="886.0" y="98.8" width="228.0" height="60.0" rx="10" fill="#161b22" stroke="#FBBF24" stroke-width="3"/>
+  <polyline points="1101.7,120.7 1026.8,214.3 1121.3,288.3" fill="none" stroke="#FBBF24" stroke-opacity="1.0" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/><circle cx="1026.8" cy="214.3" r="6" fill="#0d1117" stroke="#FBBF24" stroke-opacity="1.0" stroke-width="2.5"/><circle cx="1121.3" cy="288.3" r="12.0" fill="#FBBF24" fill-opacity="1.0"/><polyline points="898.3,136.8 826.0,230.1 930.7,288.6" fill="none" stroke="#FBBF24" stroke-opacity="1.0" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/><circle cx="826.0" cy="230.1" r="6" fill="#0d1117" stroke="#FBBF24" stroke-opacity="1.0" stroke-width="2.5"/><circle cx="930.7" cy="288.6" r="12.0" fill="#FBBF24" fill-opacity="1.0"/>
+  <polyline points="761.9,371.9 765.8,371.9 769.6,371.9 773.4,371.9 777.3,372.0 781.1,372.0 785.0,372.0 788.8,372.0 792.6,372.0 796.5,372.0 800.3,372.0 804.2,372.0 808.0,372.0 811.8,372.0 815.7,372.0 819.5,371.9 823.4,371.7 827.2,371.3 831.0,370.9 834.9,370.4 838.7,370.0 842.6,369.5 846.4,369.1 850.2,368.6 854.1,368.0 857.9,367.4 861.8,366.7 865.6,366.0 869.4,365.3 873.3,364.6 877.1,364.0 881.0,363.3 884.8,362.6 888.6,362.0 892.5,361.3 896.3,360.6 900.2,359.9 904.0,359.2 907.8,358.4 911.7,357.7 915.5,356.9 919.4,356.1 923.2,355.2 927.0,354.3 930.9,353.4 934.7,352.5 938.6,351.7 942.4,350.8 946.2,350.0 950.1,349.2 953.9,348.4 957.8,347.7 961.6,346.9 965.4,346.2 969.3,345.6 973.1,344.9 977.0,344.3 980.8,343.7 984.6,343.2 988.5,342.6 992.3,342.1 996.2,341.6 1000.0,341.2 1003.8,340.7 1007.7,340.3 1011.5,339.9 1015.4,339.6 1019.2,339.3 1023.0,339.0 1026.9,338.7 1030.7,338.5 1034.6,338.3 1038.4,338.2 1042.2,338.1 1046.1,338.0 1049.9,338.0 1053.8,338.0 1057.6,338.0 1061.4,338.0 1065.3,338.0 1069.1,338.0 1073.0,338.0 1076.8,338.0 1080.6,338.0 1084.5,338.1 1088.3,338.1 1092.2,338.1 1096.0,338.1 1099.8,338.1 1103.7,338.1 1107.5,338.1 1111.4,338.1 1115.2,338.1 1119.0,338.1 1122.9,338.1 1126.7,338.1 1130.6,338.1 1134.4,338.1 1138.2,338.1 1142.1,338.2 1145.9,338.2 1149.8,338.2 1153.6,338.2 1157.4,338.2 1161.3,338.2 1165.1,338.2 1169.0,338.2 1172.8,338.2 1176.6,338.2 1180.5,338.2 1184.3,338.2 1188.2,338.2 1192.0,338.2 1195.8,338.3 1199.7,338.3 1203.5,338.3 1207.4,338.3 1211.2,338.3 1215.0,338.3 1218.9,338.3 1222.7,338.3 1226.6,338.3 1230.4,338.3 1234.2,338.3 1238.1,338.3" fill="none" stroke="#FBBF24" stroke-opacity="0.8" stroke-width="2"/>
+  <text x="1240" y="392" text-anchor="end" fill="#8b949e" font-size="13"
+        font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">MuJoCo pose + base height, sim-in-the-loop stand-up</text>
+  <g font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">
+    <rect x="80" y="118" width="6" height="96" fill="#FBBF24"/>
+    <text x="108" y="190" fill="#e6edf3" font-size="80" font-weight="700">dog2real</text>
+    <text x="110" y="248" fill="#8b949e" font-size="22">Sim-to-real RL for a DIY 12-DoF robot dog</text>
+    <text x="110" y="280" fill="#8b949e" font-size="22">MuJoCo · from-scratch PPO · ONNX · MIT-mode CAN</text>
+    <text x="110" y="330" fill="#FBBF24" font-size="15">one YAML robot → train → randomise → export → deploy</text>
+  </g>
+</svg>

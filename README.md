@@ -1,43 +1,135 @@
-# dog2real
+<p align="center">
+  <img src="docs/assets/banner.svg" alt="dog2real: sim-to-real RL for a DIY 12-DoF robot dog" width="100%">
+</p>
 
-**Sim-to-real reinforcement learning for a DIY 12-DoF robot dog.**
-Describe your quadruped in one YAML file, train a walking or get-up policy in MuJoCo
-with a from-scratch PPO, export it to ONNX, and run it on a Raspberry Pi / Jetson
-through a safety-checked 50 Hz runtime that you can first validate against the
-simulator with the *same code*.
+<p align="center">
+  <a href="https://github.com/coopersimpson101-debug/dog2real/actions/workflows/ci.yml"><img src="https://github.com/coopersimpson101-debug/dog2real/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="License: MIT"></a>
+  <img src="https://img.shields.io/badge/python-3.10%20%7C%203.12-3776AB?logo=python&logoColor=white" alt="Python 3.10 | 3.12">
+  <img src="https://img.shields.io/badge/sim-MuJoCo-FBBF24" alt="Simulator: MuJoCo">
+  <img src="https://img.shields.io/badge/RL-PPO%20from%20scratch-FBBF24" alt="PPO from scratch">
+  <img src="https://img.shields.io/badge/export-ONNX%20%7C%20TorchScript-FBBF24" alt="Export: ONNX | TorchScript">
+  <img src="https://img.shields.io/badge/real%20robot-not%20yet%20tested-lightgrey" alt="Real robot: not yet tested">
+</p>
 
-[![ci](../../actions/workflows/ci.yml/badge.svg)](../../actions/workflows/ci.yml)
-![python](https://img.shields.io/badge/python-3.10%2B-blue) ![license](https://img.shields.io/badge/license-MIT-green)
+**Sim-to-real reinforcement learning for a DIY 12-DoF robot dog.** Describe your quadruped in one
+YAML file, train a walking or get-up policy in MuJoCo with a from-scratch PPO, export it to ONNX,
+and run it through a safety-checked 50 Hz runtime that you can validate against the simulator with
+the *same code* before powering a single motor.
 
-| Simulation | Real robot |
-|:---:|:---:|
-| _sim video: walking (TODO, see [Hardware validation](#hardware-validation--todo-for-the-author))_ | _real video: walking (TODO)_ |
-| _sim video: get-up (TODO)_ | _real video: get-up (TODO)_ |
+<p align="center">
+  <a href="#quickstart">Quickstart</a> ·
+  <a href="#architecture">Architecture</a> ·
+  <a href="#sim-to-real-techniques">Sim-to-real</a> ·
+  <a href="#results">Results</a> ·
+  <a href="#status">Status</a> ·
+  <a href="docs/match_your_robot.md">Match your robot</a> ·
+  <a href="docs/deployment.md">Deployment</a>
+</p>
 
-> **Status: the software is done and tested in simulation; nothing has run on the real robot yet.**
-> No trained walking policy is included. See [Honest status](#honest-status).
+<table>
+  <tr>
+    <td align="center" width="50%"><img src="docs/assets/walk_v0.gif" alt="Simulation: the walk_v0 PPO policy walking at 0.5 m/s in MuJoCo" width="100%"></td>
+    <td align="center" width="50%"><img src="docs/assets/sitl_standup.gif" alt="Sim-in-the-loop stand-up from lying, rendered offscreen with MuJoCo" width="100%"></td>
+  </tr>
+  <tr>
+    <td align="center"><sub><b>Simulation: policy trained 77 min on a desktop CPU.</b> The committed
+    <a href="policies/walk_v0.pt"><code>policies/walk_v0.pt</code></a> tracking v<sub>x</sub> = 0.5 m/s
+    (nominal physics, 0.09 m/s mean velocity error, 0 falls).</sub></td>
+    <td align="center"><sub><b>Simulation: sim-in-the-loop stand-up, no policy.</b> The unchanged
+    <code>RobotRuntime</code> + <code>SafetyLayer</code> drive MuJoCo through the hardware interface:
+    lying → 0.285 m in a 3 s ramp, 0 safety faults.</sub></td>
+  </tr>
+</table>
+<p align="center"><sub>Both clips are offscreen MuJoCo renders made by <code>docs/assets/make_figures.py</code>.
+Nothing here has run on a physical robot yet.</sub></p>
 
----
+## Highlights
 
-## Why this repo
+- **Your robot, parameterised**: link lengths, masses, CoM, joint limits, motor torque-speed curve,
+  armature, friction and PD gains live in [`configs/robot.yaml`](configs/robot.yaml); the MJCF is generated from it.
+- **Readable, hand-written core**: PPO, GAE, env, rewards, domain randomisation, actuator model and
+  deployment controller in plain PyTorch/numpy (~2.9 k lines, no stable-baselines / rl_games / Isaac).
+- **Runs on a CPU**: vectorised MuJoCo envs batched in numpy, ~1-2 k env steps/s on one laptop core.
+- **Sim-to-real built in**: DC-motor torque-speed model, 0-16 ms latency buffer, gain/strength/mass/friction/CoM
+  randomisation, IMU bias + noise, pushes, asymmetric critic, one observation function shared by sim and robot.
+- **Deployment you can trust**: ONNX/TorchScript export with round-trip checks (ONNX Runtime diff 6.0e-8),
+  MIT-mode CAN driver for CubeMars AK motors, latched safety layer, and sim-in-the-loop with the real runtime.
+- **A walking policy on a CPU budget**: 7.7 M env steps (77 min, 128 envs) gives a policy that tracks
+  0.5 m/s at 0.08-0.11 m/s error with 0 falls, with and without domain randomisation (in simulation).
+- **47 tests in ~15 s**, plus a CI smoke pipeline: train 3 iterations → export → sim-in-the-loop → motor sysid.
 
-Most quadruped RL code assumes a Unitree robot and a GPU cluster. dog2real is aimed at
-the robot on your desk:
+## Quickstart
 
-* **Your robot, parameterised.** Link lengths, masses, CoM, joint limits, motor torque-speed
-  curve, armature, friction and PD gains live in [`configs/robot.yaml`](configs/robot.yaml);
-  the MJCF is generated from it. A URDF/CAD export can replace it ([docs/urdf_import.md](docs/urdf_import.md)).
-* **Readable, hand-written core.** PPO, GAE, the env, rewards, domain randomisation, the
-  actuator model and the deployment controller are plain PyTorch/numpy -- no stable-baselines,
-  no rl_games, no Isaac. About 2.9 k lines of commented library code.
-* **Runs on a CPU.** Vectorised MuJoCo envs batched in numpy; ~1-2 k env steps/s on a laptop core.
-* **Sim-to-real built in, not bolted on.** DC-motor torque-speed model, latency buffer, gain/strength/mass/friction/CoM
-  randomisation, IMU bias and noise, pushes, asymmetric critic, and one observation function shared by sim and robot.
-* **Deployment you can trust.** ONNX/TorchScript export with round-trip checks, MIT-mode CAN driver
-  (CubeMars AK / Mini-Cheetah-protocol motors) over python-can, IMU driver + filter, a latched safety layer,
-  and a **sim-in-the-loop** mode that runs the real runtime against MuJoCo.
+```bash
+git clone https://github.com/coopersimpson101-debug/dog2real && cd dog2real
+pip install torch --index-url https://download.pytorch.org/whl/cpu && pip install -e ".[dev,video]"
+pytest                                                                                  # 47 tests, ~15 s
+python scripts/play.py --checkpoint policies/walk_v0.pt --command 0.5 0 0 --no-randomization  # pretrained walker
+python scripts/run_robot.py --sim --policy policies/walk_v0.onnx --command 0.3 0 0 --duration 10  # sim-in-the-loop
+```
+
+<details>
+<summary><b>Full workflow: play, export, deploy, and every script</b></summary>
+
+```bash
+python scripts/build_model.py --view                       # look at the generated robot
+python scripts/train.py --config configs/train_walk.yaml   # train your own walker (walk_v0: --num-envs 128 --iterations 2500)
+python scripts/train.py --config configs/train_recovery.yaml
+python scripts/play.py --checkpoint runs/<run>/model_last.pt --command 0.5 0 0 --video media/sim_walk.mp4
+python scripts/export_policy.py --checkpoint runs/<run>/model_last.pt --out-dir exported
+python scripts/run_robot.py --sim --policy exported/policy.onnx --duration 10 --video media/sitl.mp4
+python docs/assets/make_figures.py sitl                    # regenerate the README figures (also: walk, curve)
+```
+
+| Script | Purpose |
+|---|---|
+| `scripts/build_model.py` | YAML -> MJCF, mass / stance summary, `--view` opens the MuJoCo viewer |
+| `scripts/train.py` | PPO training (`--num-envs`, `--iterations`, `--resume`, `--threads`) |
+| `scripts/play.py` | evaluate a checkpoint, fixed command, `--video` mp4 via imageio |
+| `scripts/export_policy.py` | TorchScript + ONNX + metadata json, verifies outputs match PyTorch |
+| `scripts/run_robot.py` | real-robot runtime; `--sim` = same runtime against MuJoCo; no `--policy` = stand + hold |
+| `scripts/motor_sysid.py` | chirp identification of one motor (`--sim` to validate the pipeline) |
+| `scripts/train_actuator_net.py` | fit a learned actuator model from motor logs |
+
+Training budget: legged-gym-style flat-ground walking typically needs on the order of 10^8 environment
+steps. At ~1.5 k steps/s on one CPU core that is days, so use more envs on a many-core machine
+(`--num-envs 512 --threads 8`). The physics loop is the bottleneck (MuJoCo stepping is single-threaded per
+env in this implementation; see the roadmap).
+
+</details>
+
+## Simulation vs real robot
+
+<table>
+  <tr><th width="20%">Behaviour</th><th width="40%">Simulation</th><th width="40%">Real robot</th></tr>
+  <tr><td>stand-up ramp + hold</td><td align="center"><img src="docs/assets/sitl_standup.gif" alt="sim stand-up" width="100%"></td><td align="center">⏳ <i>coming soon: needs the robot</i></td></tr>
+  <tr><td>walk forward 0.5 m/s</td><td align="center"><img src="docs/assets/walk_v0.gif" alt="sim walking" width="100%"></td><td align="center">⏳ <i>coming soon: needs the robot</i></td></tr>
+  <tr><td>turn in place</td><td align="center">⏳ <i>coming soon</i></td><td align="center">⏳ <i>coming soon</i></td></tr>
+  <tr><td>push recovery</td><td align="center">⏳ <i>coming soon</i></td><td align="center">⏳ <i>coming soon</i></td></tr>
+  <tr><td>get up after a fall</td><td align="center">⏳ <i>coming soon</i></td><td align="center">⏳ <i>coming soon</i></td></tr>
+</table>
+
+<p align="center">
+  <img src="docs/assets/sitl_standup_strip.png" alt="Five frames of the sim-in-the-loop stand-up from lying to standing" width="100%">
+  <br><sub>Sim-in-the-loop stand-up, frame by frame (simulation). The same command with
+  <code>--policy policies/walk_v0.onnx --command 0.3 0 0</code> stands up and then walks for 10 s with no safety fault.</sub>
+</p>
 
 ## Architecture
+
+```mermaid
+flowchart LR
+  Y["robot.yaml<br/>your measurements"] --> T["train<br/>MuJoCo x N envs<br/>from-scratch PPO"]
+  T --> DR["randomise<br/>mass, friction, gains,<br/>latency, IMU noise, pushes"]
+  DR --> T
+  T --> X["export<br/>ONNX + TorchScript<br/>normaliser baked in"]
+  X --> S["sim-in-the-loop<br/>same runtime vs MuJoCo"]
+  S --> D["deploy<br/>Pi / Jetson, 50 Hz,<br/>safety layer, MIT CAN"]
+```
+
+<details>
+<summary><b>Detailed component diagram</b></summary>
 
 ```mermaid
 flowchart LR
@@ -61,7 +153,10 @@ flowchart LR
 
 More detail: [docs/architecture.md](docs/architecture.md).
 
-## The MDP
+</details>
+
+<details>
+<summary><b>The MDP: observations, actions, rewards, curriculum</b></summary>
 
 | | |
 |---|---|
@@ -99,7 +194,10 @@ pose `exp(-‖q-q_default‖²)` gated on upright (+2), plus torque / joint-velo
 widen by 0.1 per side whenever the mean tracking reward of finished episodes exceeds 80 % of its maximum
 (up to `vx ∈ [-0.8, 1.5]`).
 
-## PPO, from scratch
+</details>
+
+<details>
+<summary><b>PPO, from scratch</b></summary>
 
 Implemented in [`dog2real/rl/ppo.py`](dog2real/rl/ppo.py) and [`storage.py`](dog2real/rl/storage.py).
 
@@ -118,6 +216,8 @@ Implemented in [`dog2real/rl/ppo.py`](dog2real/rl/ppo.py) and [`storage.py`](dog
 * 5 epochs x 4 minibatches per iteration, Adam, grad-norm clip 1.0, checkpoints every 50 iterations,
   CSV log (`progress.csv`) always + TensorBoard if installed.
 
+</details>
+
 ## Sim-to-real techniques
 
 Full explanation and the reasoning behind each range: **[docs/sim2real.md](docs/sim2real.md)**.
@@ -133,40 +233,8 @@ Full explanation and the reasoning behind each range: **[docs/sim2real.md](docs/
 | disturbances | random base-velocity pushes | `sim/env.py` |
 | behaviour | torque / acceleration / action-rate penalties, air-time reward, target rate limiting in the safety layer | `sim/rewards.py`, `deploy/safety.py` |
 
-## Quick start
-
-```bash
-git clone https://github.com/coopersimpson101-debug/dog2real && cd dog2real
-python -m venv .venv && source .venv/bin/activate          # Windows: .venv\Scripts\activate
-pip install torch --index-url https://download.pytorch.org/whl/cpu
-pip install -e ".[dev,video]"
-
-pytest                                                     # 47 tests, ~15 s on a laptop
-
-python scripts/build_model.py --view                       # look at the generated robot
-python scripts/train.py --config configs/train_walk.yaml   # walking (long; see below)
-python scripts/train.py --config configs/train_recovery.yaml
-python scripts/play.py --checkpoint runs/<run>/model_last.pt --command 0.5 0 0 --video media/sim_walk.mp4
-python scripts/export_policy.py --checkpoint runs/<run>/model_last.pt --out-dir exported
-python scripts/run_robot.py --sim --policy exported/policy.onnx --duration 10 --video media/sitl.mp4
-```
-
-| Script | Purpose |
-|---|---|
-| `scripts/build_model.py` | YAML -> MJCF, mass / stance summary, `--view` opens the MuJoCo viewer |
-| `scripts/train.py` | PPO training (`--num-envs`, `--iterations`, `--resume`, `--threads`) |
-| `scripts/play.py` | evaluate a checkpoint, fixed command, `--video` mp4 via imageio |
-| `scripts/export_policy.py` | TorchScript + ONNX + metadata json, verifies outputs match PyTorch |
-| `scripts/run_robot.py` | real-robot runtime; `--sim` = same runtime against MuJoCo; no `--policy` = stand + hold |
-| `scripts/motor_sysid.py` | chirp identification of one motor (`--sim` to validate the pipeline) |
-| `scripts/train_actuator_net.py` | fit a learned actuator model from motor logs |
-
-Training budget: legged-gym-style flat-ground walking typically needs on the order of 10^8 environment
-steps. At ~1.5 k steps/s on one CPU core that is days, so use more envs on a many-core machine
-(`--num-envs 512 --threads 8`). The physics loop is the bottleneck (MuJoCo stepping is single-threaded per
-env in this implementation; see the roadmap).
-
-## Match the sim to your robot
+<details>
+<summary><b>Match the sim to your robot</b></summary>
 
 The step-by-step guide is in **[docs/match_your_robot.md](docs/match_your_robot.md)**. Summary:
 
@@ -180,7 +248,10 @@ The step-by-step guide is in **[docs/match_your_robot.md](docs/match_your_robot.
 6. **Calibration**: zero offsets and directions of all 12 joints in `deploy.yaml`.
 7. **Validate**: sim-in-the-loop, then robot hanging on a stand, then on the floor.
 
-## Deployment
+</details>
+
+<details>
+<summary><b>Deployment</b></summary>
 
 Pi/Jetson setup, CAN bring-up, real-time tips and the safety checklist: **[docs/deployment.md](docs/deployment.md)**.
 
@@ -193,10 +264,41 @@ Pi/Jetson setup, CAN bring-up, real-time tips and the safety checklist: **[docs/
 * `RobotRuntime` runs at a fixed 50 Hz with an absolute-deadline scheduler and reports compute and
   jitter percentiles.
 
+</details>
+
 ## Results
 
-All numbers below were produced on a Windows laptop CPU while building this repo. **They are
-smoke tests, not a trained policy.**
+All numbers are from **simulation** on a Windows desktop CPU (AMD Ryzen 5 3600). Nothing has run on a
+physical robot.
+
+### walk_v0: the committed walking policy
+
+Trained with `python scripts/train.py --config configs/train_walk.yaml --num-envs 128 --threads 10 --iterations 2500`:
+128 envs x 24 steps x 2500 iterations = **7.7 M env steps in 4592 s (~77 min)**. Checkpoint:
+[`policies/walk_v0.pt`](policies/walk_v0.pt); ONNX export: [`policies/walk_v0.onnx`](policies/walk_v0.onnx)
+(+ [`walk_v0.json`](policies/walk_v0.json) metadata, ONNX vs PyTorch max diff 1.4e-6).
+At the end of training: mean episode length 981 / 1000 steps, lin-vel tracking reward 0.89 / 1.0, and the
+command curriculum had widened to its maximum (vx up to 1.5 m/s) by iteration 1635.
+
+| Evaluation (`scripts/play.py`, 0 falls in every run) | physics | mean ‖v_cmd − v‖ |
+|---|---|---:|
+| stand still, cmd (0, 0, 0), 10 s | nominal | 0.007 m/s |
+| forward vx = 0.3 m/s, 10 s | nominal | **0.176 m/s** (weakest: slow walking is tracked poorly) |
+| forward vx = 0.5 m/s, 10 s | nominal | 0.081 m/s |
+| turn in place, yaw rate 0.5 rad/s, 10 s | nominal | 0.053 m/s |
+| forward vx = 0.5 m/s, 20 s, seeds 1 / 2 / 3 | domain randomisation on | 0.090 / 0.086 / 0.107 m/s |
+
+The 0.3 m/s case tracks noticeably worse than 0.5 m/s; slow gaits likely need a longer run or a gait-phase
+reward (see the roadmap). A 77-minute CPU run is still well below the ~10^8 steps typical of legged-gym
+setups, so treat walk_v0 as a working baseline, not a tuned controller.
+
+<p align="center">
+  <img src="docs/assets/training_curve.png" alt="walk_v0 training curves: episode length, linear-velocity tracking reward and curriculum range versus PPO iteration" width="100%">
+</p>
+<p align="center"><sub>From <a href="docs/assets/walk_v0_progress.csv"><code>docs/assets/walk_v0_progress.csv</code></a>
+(every 5th iteration of the run's <code>progress.csv</code>); faint = logged values, bold = rolling mean.</sub></p>
+
+### Pipeline checks
 
 | Check | Result |
 |---|---|
@@ -205,14 +307,40 @@ smoke tests, not a trained policy.**
 | Motor sysid on a simulated motor (truth 0.010 / 0.050 / 0.100) | armature 0.0101, damping 0.0484, frictionloss 0.0934 |
 | Policy export round trip | TorchScript max abs diff 6.6e-7, ONNX Runtime 6.0e-8 vs PyTorch |
 | Sim-in-the-loop, no policy (stand-up ramp + hold) | robot rises from lying to 0.285 m base height, 0 overruns, compute 0.25 ms mean / 0.5 ms max per tick (laptop) |
-| CPU smoke-train, walking, 64 envs x 200 iterations (~0.3 M steps, 256 s, ~1.4 k steps/s) | mean episode length 95 -> 793 steps (of 1000), return -1.2 -> +5.7, lin-vel tracking term 0.06 -> 0.59 (max 1.0). Curriculum did not widen (stayed at vx <= 0.5). Evaluated at vx* = 0.3 m/s without randomisation: no falls in 10 s but mean velocity error 0.29 m/s -- **it learned to stand and balance, not to walk.** |
-| CPU smoke-train, get-up, 64 envs x 100 iterations (~0.15 M steps, 119 s) | return rose to ~3 per episode, but the upright term averages ~0.21 of its maximum -- **it does not get up yet.** |
+| Early CPU smoke-train, walking, 64 envs x 200 iterations (~0.3 M steps) | learned to stand and balance, not to walk (vx* = 0.3 m/s: 0.29 m/s error); superseded by walk_v0 |
+| CPU smoke-train, get-up, 64 envs x 100 iterations (~0.15 M steps, 119 s) | return rose to ~3 per episode, but the upright term averages ~0.21 of its maximum: **it does not get up yet.** |
 
-**Neither smoke-trained policy walks or gets up.** They used well under 1 % of a typical training budget; they only
-demonstrate that the pipeline runs end-to-end and that learning signals move in the right direction. No checkpoints or
-curves are committed.
+## Status
 
-## Hardware validation / TODO for the author
+| component | status | evidence |
+|---|:---:|---|
+| MJCF generation, vectorised env, rewards, curriculum | ✅ | unit tests (CI) |
+| Domain randomisation, DC-motor + learned actuator models | ✅ | unit tests (CI) |
+| From-scratch PPO (GAE, clipping, KL-adaptive LR) | ✅ | toy-task test: reward -0.75 → -0.05 |
+| ONNX / TorchScript export | ✅ | round-trip diff ≤ 6.6e-7 |
+| Runtime + safety layer, sim-in-the-loop | ✅ | stand-up to 0.285 m, 0 overruns (GIF above) |
+| Walking policy (walk_v0) | ✅ 🧪 | walks in simulation: 0.08-0.11 m/s error at 0.5 m/s, 0 falls; simulated only |
+| Get-up policy | ⏳ | not trained yet (smoke run only) |
+| MIT-mode CAN driver, motor sysid | 🧪 | python-can virtual bus + simulated motor only |
+| MPU-6050 IMU driver | ⏳ | never read a real sensor |
+| Anything on the real robot | ⏳ | needs hardware (checklist below) |
+
+✅ done and tested here · 🧪 simulated only · ⏳ needs hardware or not done yet
+
+* **Implemented and unit-tested in simulation**: MJCF generation, vectorised env (walk + get-up), rewards,
+  curriculum, domain randomisation, actuator models, PPO, logging/checkpointing, export, runtime,
+  safety layer, MIT-mode CAN framing + driver (against python-can's virtual bus with simulated motors),
+  IMU filter, motor sysid.
+* **Achieved in simulation only**: a walking policy (walk_v0). It has never driven a real motor.
+* **Not validated**: anything on real hardware. The CAN driver has never talked to a real motor, the
+  MPU-6050 driver has never read a real sensor, motor presets are taken from public protocol
+  descriptions and must be checked against your firmware.
+* **Not achieved yet**: a get-up policy.
+* The default `robot.yaml` (and so walk_v0) describes a generic ~7 kg robot, not the author's robot:
+  retrain after filling in your own measurements.
+
+<details>
+<summary><b>Hardware validation checklist (exact commands)</b></summary>
 
 Everything in this section needs the physical robot. Nothing here has been done yet.
 
@@ -232,24 +360,19 @@ Everything in this section needs the physical robot. Nothing here has been done 
 7. Record the sim videos: `python scripts/play.py --checkpoint runs/<run>/model_last.pt --command 0.5 0 0 --video media/sim_walk.mp4`
 8. On the robot (stand first, then floor, e-stop in hand, `safety.max_torque` low):
    `sudo chrt -f 80 python scripts/run_robot.py --policy exported/policy.onnx --command 0.3 0 0 --duration 20 --log logs/real_walk.npz`
-9. Film the real robot from the same angle as the sim camera and fill the table:
-
-| Behaviour | Simulation | Real robot | Notes |
-|---|:---:|:---:|---|
-| stand-up ramp + hold | _media/sim_hold.mp4_ | _media/real_hold.mp4_ | |
-| walk forward 0.3 m/s | _media/sim_walk.mp4_ | _media/real_walk.mp4_ | |
-| turn in place | _media/sim_turn.mp4_ | _media/real_turn.mp4_ | |
-| push recovery | _media/sim_push.mp4_ | _media/real_push.mp4_ | |
-| get up after a fall | _media/sim_getup.mp4_ | _media/real_getup.mp4_ | |
+9. Film the real robot from the same angle as the sim camera and fill the [Simulation vs real robot](#simulation-vs-real-robot) table.
 
 (`media/*.mp4` is git-ignored by default; add the final clips with `git add -f` or host them as GitHub
 release assets / README attachments, and replace the cells with `<video>` or GIF links.)
 
 10. Report measured runtime timing on the Pi (`timing:` line printed at the end of `run_robot.py`).
 
+</details>
+
 ## Roadmap
 
-- [ ] Train a full walking policy on a many-core machine and publish curves + checkpoint
+- [x] Train a walking policy and publish curves + checkpoint (walk_v0, CPU, 77 min)
+- [ ] Longer / many-core training for better slow-speed tracking, and a get-up policy
 - [ ] Faster physics: `mujoco.rollout` / multithreaded stepping, or an optional MJX (JAX) backend
 - [ ] Rough-terrain heightfield + terrain curriculum
 - [ ] Gait-phase observation / foot-clearance reward for more natural gaits
@@ -259,18 +382,11 @@ release assets / README attachments, and replace the cells with `<video>` or GIF
 - [ ] Serial-bus-servo driver (Feetech / Dynamixel) as a second `MotorBus` implementation
 - [ ] Real-robot videos (see the table above)
 
-## Honest status
+## Contributing and citing
 
-* **Implemented and unit-tested in simulation**: MJCF generation, vectorised env (walk + get-up), rewards,
-  curriculum, domain randomisation, actuator models, PPO, logging/checkpointing, export, runtime,
-  safety layer, MIT-mode CAN framing + driver (against python-can's virtual bus with simulated motors),
-  IMU filter, motor sysid.
-* **Not validated**: anything on real hardware -- the CAN driver has never talked to a real motor, the
-  MPU-6050 driver has never read a real sensor, motor presets are taken from public protocol
-  descriptions and must be checked against your firmware.
-* **Not achieved yet**: a policy that walks. Only a short CPU smoke-train was run.
-* The default `robot.yaml` describes a generic ~7 kg robot, not the author's robot.
+Contributions are welcome, especially hardware results; see [CONTRIBUTING.md](CONTRIBUTING.md).
+To cite this software, use [CITATION.cff](CITATION.cff).
 
 ## License
 
-MIT -- see [LICENSE](LICENSE).
+MIT. See [LICENSE](LICENSE).
