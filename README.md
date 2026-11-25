@@ -4,6 +4,7 @@
 
 <p align="center">
   <a href="https://github.com/coopersimpson101-debug/dog2real/actions/workflows/ci.yml"><img src="https://github.com/coopersimpson101-debug/dog2real/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
+[![Release](https://img.shields.io/github/v/release/coopersimpson101-debug/dog2real?color=FBBF24&label=release)](https://github.com/coopersimpson101-debug/dog2real/releases/latest)
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="License: MIT"></a>
   <img src="https://img.shields.io/badge/python-3.10%20%7C%203.12-3776AB?logo=python&logoColor=white" alt="Python 3.10 | 3.12">
   <img src="https://img.shields.io/badge/sim-MuJoCo-FBBF24" alt="Simulator: MuJoCo">
